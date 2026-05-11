@@ -609,8 +609,8 @@
       }
 
       tbody.innerHTML = filtered.map(f => {
-        const horario = fmtDateTime(f.chegada_brt || f.partida_brt);
-        const assentos = f.assentos
+       cont horario = f.chegada || f.partida || '—';
+         const assentos = f.assentos
           ? `<span class="seats-pill">✦ ${f.assentos}</span>`
           : '—';
         return `<tr>
