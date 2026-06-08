@@ -1,71 +1,90 @@
-# 06-05-2026 — SIROS/ANAC
+# 07-05-2026 — SIROS + Supabase
 
 Sub-projeto do programa **SN-2026**.  
-Painel de voos programados usando a **API oficial SIROS da ANAC** — sem autenticação, sem custo, sem limites.
+Pipeline de dados com CI/CD completo: SIROS/ANAC → Supabase → GitHub Pages.
 
-Organização: [github.com/SN-2026](https://github.com/SN-2026)  
-Site: [SN-2026.github.io/06-05-2026-siros](https://SN-2026.github.io/06-05-2026-siros/)
+\---
 
----
+## Arquitetura
 
-## O que é o SIROS
+```
+GitHub Actions (4x ao dia)
+   → scripts/fetch\_flights.py
+   → GET sas.anac.gov.br/sas/siros\_api/voos
+   → UPSERT tabela voos no Supabase
+         ↓
+Supabase (PostgreSQL)
+   → API REST automática (anon key — leitura pública)
+         ↓
+GitHub Pages serve index.html
+   → fetch da API Supabase
+   → Filtros, ordenação, paginação e histórico
+```
 
-O SIROS (Sistema de Registros dos Serviços Aéreos) é o sistema da ANAC onde as companhias aéreas registram obrigatoriamente todos os seus voos programados, conforme a Resolução ANAC nº 440/2017.
+## O que ganhamos em relação ao projeto anterior
 
-A API pública disponibiliza:
-
-| Endpoint | O que retorna |
-|---|---|
-| `/api/voos?dataReferencia=DDMMAAAA` | Todos os voos do dia |
-| `/api/voosPeriodo?dataReferenciaInicio=...&dataReferenciaFinal=...` | Voos em um período |
-| `/api/aerodromo?sg_aerodromo_icao_ou_iata=ICAO` | Dados de um aeroporto |
-| `/api/registros` | Todos os registros vigentes |
-
-## Vantagens em relação à AviationStack
-
-| | AviationStack | **SIROS/ANAC** |
-|---|---|---|
-| Custo | 100 chamadas/mês | **Ilimitado** |
-| Autenticação | API Key obrigatória | **Nenhuma** |
-| Dados extras | Apenas status | **Aeronave, assentos, tipo** |
-| Fonte | Privada | **Oficial do governo** |
-| Cobertura | Mundial | Brasil (100% das rotas regulares) |
+||SIROS + JSON (anterior)|**SIROS + Supabase (este)**|
+|-|-|-|
+|Histórico|Sobrescreve a cada execução|**Acumula — histórico completo**|
+|Consultas|Apenas por aeroporto/data fixa|**Filtros, ordenação, paginação**|
+|API própria|❌ Não|**✅ REST gerada automaticamente**|
+|Dados no repo|data/\*.json commitados|**Só código — dados no banco**|
+|Busca histórica|❌|**✅ Qualquer data disponível**|
 
 ## Como configurar
 
-### 1. Criar repositório na organização SN-2026
-`github.com/SN-2026` → New repository → `06-05-2026-siros` → Public
+### 1\. Criar repositório na organização SN-2026
 
-### 2. Fazer upload dos arquivos
-Arraste todos os arquivos deste ZIP para o repositório via interface web.
+`github.com/SN-2026` → New repository → `07-05-2026-supabase` → Public
 
-### 3. Ativar GitHub Pages
+### 2\. Executar o SQL de setup no Supabase
+
+Copie o conteúdo de `sql/setup.sql` e execute no **SQL Editor** do Supabase.
+
+### 3\. Configurar Secrets no GitHub
+
+Settings → Secrets and variables → Actions:
+
+|Secret|Valor|
+|-|-|
+|`SUPABASE\_URL`|URL do projeto (ex: https://XXXX.supabase.co)|
+|`SUPABASE\_SERVICE\_KEY`|service\_role key do Supabase|
+
+### 4\. Configurar variável AIRPORTS
+
+Settings → Variables → Actions:
+
+* Nome: `AIRPORTS`
+* Valor: `SBCA,SBGR,SBSP,SBCT,SBGL,SBBR,SBFL,SBPA,SBSV,SBFZ`
+
+### 5\. Atualizar index.html com suas chaves
+
+Edite as duas constantes no topo do `<script>` no `index.html`:
+
+```javascript
+const SUPABASE\_URL      = "https://SEU\_PROJETO.supabase.co";
+const SUPABASE\_ANON\_KEY = "eyJ...SUA\_ANON\_KEY...";
+```
+
+### 6\. Ativar GitHub Pages
+
 Settings → Pages → Branch: main / (root) → Save
 
-### 4. Configurar a variável AIRPORTS
-Settings → Variables → Actions → New repository variable  
-Nome: `AIRPORTS`  
-Valor: `SBCA,SBGR,SBSP,SBCT,SBGL,SBBR,SBFL,SBPA,SBSV,SBFZ`
+### 7\. Executar o workflow pela primeira vez
 
-> Sem limite de aeroportos — a API é gratuita e pública!
-
-### 5. Executar o workflow
-Actions → Atualizar dados de voos (SIROS/ANAC) → Run workflow
-
-### 6. Acessar o site
-```
-https://SN-2026.github.io/06-05-2026-siros/
-```
+Actions → Pipeline SIROS → Supabase → Run workflow
 
 ## Execução local
 
 ```bash
-pip install requests
-python scripts/fetch_flights.py
-
-# Servir localmente
-python -m http.server 8080
+pip install requests supabase
+export SUPABASE\_URL="https://SEU\_PROJETO.supabase.co"
+export SUPABASE\_SERVICE\_KEY="SUA\_SERVICE\_KEY"
+export AIRPORTS="SBCA"
+python scripts/fetch\_flights.py
 ```
 
 ## Licença
+
 MIT
+
