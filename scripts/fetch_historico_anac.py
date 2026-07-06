@@ -222,4 +222,4 @@ for i in range(0, len(registros), LOTE):
 print(f"\nConcluído — {processados} registros históricos enviados/processados.")
 if erros > 0:
     print(f"[ATENÇÃO] {erros} lote(s) com erro.")
-    sys.exit(1
+    sys.exit(1)
